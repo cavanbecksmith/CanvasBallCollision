@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<!-- <link href="https://fonts.googleapis.com/css?family=Spicy+Rice" rel="stylesheet"> -->
+	<!-- <link href="https://fonts.googleapis.com/css?family=Rock+Salt|Spicy+Rice" rel="stylesheet"> -->
+
+</head>
+<body>
+
+<div id="App">
+
+	<h1>Canvas Balls</h1>
+
+	<canvas id="canvas" width="800" height="200"></canvas>
+	<div class="btnWrapper">
+		<div class="btn stop" onclick="stop()">Stop</div>
+		<div class="btn play" onclick="start()">Play</div>
+		<div class="btn play" onclick="newBall()">New ball</div>
+	</div>
+</div>
+
+<style type="text/css">
+
+	@font-face {
+	  font-family: 'Rock Salt';
+	  font-style: normal;
+	  font-weight: 400;
+	  src: local('Rock Salt Regular'), local('RockSalt-Regular'), url(fonts/rockSalt.woff2) format('woff2');
+	  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+	}
+
+	body, html{
+		margin: 0;
+		padding: 0;
+	}
+
+	body{
+		background-image: linear-gradient(to top, #30cfd0 0%, #330867 100%);
+		height: 100vh;
+		overflow: hidden;
+	}
+
+	#App{
+		padding-top: 30px;
+		/*max-width: 1020px;*/
+		margin: auto;
+		text-align: center;
+		/*padding: 30px 15px 120px 15px;*/
+		box-sizing: border-box;
+		height: 100%;
+	}
+
+	#App h1{
+		font-size: 3.5em;
+		margin: 0;
+		color: white;
+		font-family: sans-serif;
+		/*font-family: 'Spicy Rice', cursive;*/
+		font-family: 'Rock Salt', cursive;
+		font-weight: normal;
+	}
+
+	#App .btnWrapper{
+		margin-top: 25px;
+	}
+
+	#App .btnWrapper .btn{
+		display: inline-block;
+		padding: 15px;
+		background-image: linear-gradient(to top, #fbc2eb 0%, #a6c1ee 100%);
+		/*box-shadow: 60px -16px teal;*/
+		/*box-shadow: 3px 3px red, -1em 0 0.4em olive;*/
+		box-shadow: 2px 3px 3px 2px rgba(0, 0, 0, 0.2);
+		color: white;
+		font-family: arial,helvetica,sans-serif;
+		font-size: 1.5em;
+		font-weight: bold;	
+		transition: all 0.5s;
+		margin-right: 10px;
+		margin-left: 10px; 
+	}
+
+	#App .btnWrapper .btn:hover{
+		cursor: pointer;
+		/*background-image: linear-gradient(to right, #eea2a2 0%, #bbc1bf 19%, #57c6e1 42%, #b49fda 79%, #7ac5d8 100%);*/
+		background: black;
+		/*background-image: linear-gradient(to right, #f78ca0 0%, #f9748f 19%, #fd868c 60%, #fe9a8b 100%);*/
+		transform: scale(1.2)
+	}
+
+	#App #canvas{
+		border: 10px solid white;
+		border-radius: 20px;
+		margin: 0 auto;
+		display: inline-block;
+		/*background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);*/
+		/*background-image: linear-gradient(to right, #eea2a2 0%, #bbc1bf 19%, #57c6e1 42%, #b49fda 79%, #7ac5d8 100%);*/
+		background-image: linear-gradient(to top, #accbee 0%, #e7f0fd 100%);
+	}
+</style>
+
+<script type="text/javascript">
+
+// (function(){
+
+var canvas = document.getElementById("canvas");
+var ctx = canvas.getContext("2d");
+
+// canvas.width = window.width;
+// canvas.height = window.height;
+
+var objArray = [];
+
+var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame ||
+                            window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+var cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame;
+var startTime = window.mozAnimationStartTime;  // Only supported in FF. Other browsers can use something like Date.now().
+var Ticker;
+var running = false;
+// var ball = new Ball(randomX(),randomY(),20);
+// var ball2 = new Ball(randomX(),randomY(),20);
+
+var mouseX=null, mouseY=null; 
+
+// canvas.addEventListener('click',function(e){
+
+// 	console.log('click')
+
+//     var offsetX = 0, offsetY = 0
+
+// 	if (canvas.offsetParent) {
+//       do {
+//         offsetX += canvas.offsetLeft;
+//         offsetY += canvas.offsetTop;
+//       } while ((canvas = canvas.offsetParent));
+//     }
+
+//     x = e.pageX - offsetX;
+//     y = e.pageY - offsetY;
+
+//     console.log(x,y);
+
+// });
+
+
+canvas.addEventListener("mousemove", function(evt){
+
+	// console.log(evt);
+	console.log(getMousePos(canvas,evt));
+
+});
+
+function getMousePos(canvas,evt){
+	var rect = canvas.getBoundingClientRect();
+	return {
+		x: evt.clientX - rect.left,
+		y: evt.clientY - rect.top,
+	}
+}
+
+
+function randomColor() {
+    red = Math.floor(Math.random() * 3) * 127;
+    green = Math.floor(Math.random() * 3) * 127;
+    blue = Math.floor(Math.random() * 3) * 127;
+    rc = "rgb(" + red + ", " + green + ", " + blue + ")";
+    return rc;
+}
+
+window.onresize = function(event) {
+	resizeCanvas();
+};
+
+// Clear canvas of everything on screen
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth - 300;
+    canvas.height = window.innerHeight - 300;
+}
+
+function randomRadius(){
+    r = Math.floor(Math.random() * 10 + 10);
+    //r = 2;
+    return r;
+}
+
+// Random position on X axis
+function randomX() {
+    x = Math.floor(Math.random() * canvas.width);
+    if (x < 20) {
+        x = 20;
+    } else if (x + 20 > canvas.width) {
+        x = canvas.width - 20;
+    }
+    return x;
+}
+
+// Random position on Y axis
+function randomY() {
+    y = Math.floor(Math.random() * canvas.height);
+    if (y < 20) {
+        y = 20;
+    } else if (y + 20 > canvas.height) {
+        y = canvas.height - 20;
+    }
+    return y;
+}
+
+// Random velocityX
+function randomDx() {
+    r = Math.floor(Math.random() * 10 - 5);
+    return r;
+}
+
+// Random velocityY
+function randomDy() {
+    r = Math.floor(Math.random() * 10 - 5);
+    return r;
+}
+
+// Moves objects in the array according to their velocity
+function moveObjects() {
+    for (var obj in objArray) {
+        objArray[obj].x += objArray[obj].dx;
+        objArray[obj].y += objArray[obj].dy;
+    }    
+}
+
+// Calculate next frame including veolicty
+function distanceNext(a, b) {
+    return Math.sqrt(Math.pow((a.x + a.dx - b.x - b.dx), 2) + Math.pow((a.y + a.dy - b.y - b.dy), 2)) - a.radius - b.radius;
+}
+
+// A Squared + B Squared
+function distance(a, b) {
+    return Math.sqrt(Math.pow((a.x - b.x), 2) + Math.pow((a.y - b.y), 2));
+}
+
+// Ball Constructor function
+// new Ball(x,y,radius)
+function Ball(x, y, radius) {
+    this.radius = radius;
+    // Random velocity X,Y
+    this.dx = randomDx();
+    this.dy = randomDy();
+    // Mass of the ball is radius to pwer of 3
+    this.mass = Math.pow(this.radius,3);
+    // X Y values set
+    this.x = x;
+    this.y = y;
+    this.id = null;
+    this.color = randomColor();
+    this.lineColor = randomColor();
+    // Runs on update
+    this.draw = function() {
+        ctx.beginPath();
+        ctx.arc(Math.round(this.x), Math.round(this.y), this.radius, 0, 2*Math.PI);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.strokeStyle = this.lineColor;
+        ctx.lineWidth=5;
+        ctx.stroke();
+        ctx.closePath();
+    };
+    this.speed = function() {
+        // magnitude of velocity vector
+        // A Squared + B Squared
+        return Math.sqrt(Math.pow(this.dx,2) + Math.pow(this.dy,2));
+    };
+    this.angle = function() {
+    	// Calculate the angle of the ball
+    	// This will be from the ball center in radians
+        return Math.atan2(this.dy, this.dx);
+    };
+}
+
+
+function moveBalls(){
+	for(var ball in objArray){
+		objArray[ball].x += objArray[ball].dx;
+		objArray[ball].y += objArray[ball].dy;
+	}
+}
+
+function drawBalls() {
+    for (var ball in objArray) {
+        objArray[ball].draw();
+    }
+}
+
+function wallCollision(ball) {
+	// for(ball in objArray){
+    if (ball.x - ball.radius + ball.dx < 0 ||
+        ball.x + ball.radius + ball.dx > canvas.width) {
+        ball.dx *= -1;
+    }
+    if (ball.y - ball.radius + ball.dy < 0 ||
+        ball.y + ball.radius + ball.dy > canvas.height) {
+        ball.dy *= -1;
+    }
+    if (ball.y + ball.radius > canvas.height) {
+        ball.y = canvas.height - ball.radius;
+    }
+    if (ball.y - ball.radius < 0) {
+        ball.y = ball.radius;
+    }
+    if (ball.x + ball.radius > canvas.width) {
+        ball.x = canvas.width - ball.radius;
+    }
+    if (ball.x - ball.radius < 0) {
+        ball.x = ball.radius;
+    }    
+	// }
+}
+
+// If either of the balls are overlapping
+// Calculate the amount of which they are overlapping 
+function overLapFix() {
+    for (var obj1 in objArray) {
+        for (var obj2 in objArray) {
+        	// If object 1 not 2 
+        	// & distance between both objects is less than sum of both radius's
+            if (obj1 !== obj2 &&
+                distance(objArray[obj1], objArray[obj2]) < objArray[obj1].radius + objArray[obj2].radius)
+            {
+            	// Angle betewen both of the objects
+                var theta = Math.atan2((objArray[obj1].y - objArray[obj2].y), (objArray[obj1].x - objArray[obj2].x));
+                // Calculate the overlap by -> sum(object1R,object2R) - distance between 1 & 2
+                var overlap = objArray[obj1].radius + objArray[obj2].radius - distance (objArray[obj1], objArray[obj2]);
+                // Checks to see which one is the smaller object
+                var smallerObject = objArray[obj1].radius < objArray[obj2].radius ? obj1 : obj2
+                // Move the smaller object acording to the angle
+                objArray[smallerObject].x -= overlap * Math.cos(theta);
+                objArray[smallerObject].y -= overlap * Math.sin(theta);
+            }
+        }
+    }
+}
+
+
+function ballCollision() {
+    for (var obj1 in objArray) {
+        for (var obj2 in objArray) {
+            if (obj1 !== obj2 && distanceNext(objArray[obj1], objArray[obj2]) <= 0) {
+
+
+            	// Get both angles 
+                var theta1 = objArray[obj1].angle();
+                var theta2 = objArray[obj2].angle();
+
+                // Angle Between both inn radians
+                var phi = Math.atan2(objArray[obj2].y - objArray[obj1].y, objArray[obj2].x - objArray[obj1].x);
+
+                // This gives us the angle in degrees on a flat plane;
+                // console.log(phi*180/Math.PI);
+
+                // console.log(theta1*180/Math.PI, theta2*180/Math.PI);
+                // console.log(v1*Math.cos(theta1 - phi));
+
+                // Mass and speed
+                var m1 = objArray[obj1].mass;
+                var m2 = objArray[obj2].mass;
+                var v1 = objArray[obj1].speed();
+                var v2 = objArray[obj2].speed();
+
+                
+
+                // OBJ 1
+                var dx1F = (v1 * Math.cos(theta1 - phi) * (m1-m2) + 2*m2*v2*Math.cos(theta2 - phi)) / (m1+m2) * Math.cos(phi) + v1*Math.sin(theta1-phi) * Math.cos(phi+Math.PI/2);
+                var dy1F = (v1 * Math.cos(theta1 - phi) * (m1-m2) + 2*m2*v2*Math.cos(theta2 - phi)) / (m1+m2) * Math.sin(phi) + v1*Math.sin(theta1-phi) * Math.sin(phi+Math.PI/2);
+
+                // OBJ 2
+                var dx2F = (v2 * Math.cos(theta2 - phi) * (m2-m1) + 2*m1*v1*Math.cos(theta1 - phi)) / (m1+m2) * Math.cos(phi) + v2*Math.sin(theta2-phi) * Math.cos(phi+Math.PI/2);
+                var dy2F = (v2 * Math.cos(theta2 - phi) * (m2-m1) + 2*m1*v1*Math.cos(theta1 - phi)) / (m1+m2) * Math.sin(phi) + v2*Math.sin(theta2-phi) * Math.sin(phi+Math.PI/2);
+
+                objArray[obj1].dx = dx1F;                
+                objArray[obj1].dy = dy1F;                
+                objArray[obj2].dx = dx2F;                
+                objArray[obj2].dy = dy2F;
+                // stop();
+
+                objArray[obj1].lineColor = randomColor();
+                objArray[obj2].lineColor = randomColor();
+            }            
+        }
+        wallCollision(objArray[obj1]);
+    }
+}
+
+// Gets len of array which is +1 
+function newBall(){
+	objArray[objArray.length] = new Ball(randomX(), randomY(), 30);
+}
+
+function removeBall(){
+	for(ball in objArray){
+
+	}
+}
+
+function update() {
+
+	clearCanvas();
+    moveBalls();
+    drawBalls();
+    ballCollision();
+    overLapFix();
+	// --- Clears the stage
+	if(running){
+		Ticker = requestAnimationFrame(update);
+	}
+}
+
+function stop(){
+	running = false;
+	cancelAnimationFrame(Ticker);
+}
+
+function start(){
+	if(!running){
+		running = true;
+		Ticker = requestAnimationFrame(update);
+	}
+}
+
+function createBalls(){
+
+	for (i = 0; i<10; i++) {
+	    var temp = new Ball(randomX(), randomY(), randomRadius());
+	    temp.dx = 2;
+	    temp.dy = 2;
+	    objArray[objArray.length] = temp;
+	}
+
+}
+
+
+createBalls();
+resizeCanvas();
+start();
+
+// })();
+
+</script>
+
+
+</body>
+</html>
